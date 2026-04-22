@@ -1063,12 +1063,9 @@
           { label: '中立', value: 2 },
           { label: '认同', value: 3 }
         ]
-      }
-    ];
-    const specialQuestions = [
+      },
       {
         id: 'drink_gate_q1',
-        special: true,
         kind: 'drink_gate',
         text: '您平时有什么爱好？',
         options: [
@@ -1080,7 +1077,6 @@
       },
       {
         id: 'drink_gate_q2',
-        special: true,
         kind: 'drink_trigger',
         dependsOn: { questionId: 'drink_gate_q1', answerValue: 3 },
         text: '您对饮酒的态度是？',
@@ -1466,8 +1462,9 @@
 };
     const dimensionOrder = ['S1','S2','S3','E1','E2','E3','A1','A2','A3','Ac1','Ac2','Ac3','So1','So2','So3'];
 
-    const DRUNK_TRIGGER_QUESTION_ID = 'drink_gate_q2';
-    const conditionalSpecialQuestions = specialQuestions.filter(q => q.dependsOn);
+    const scoredQuestions = questions.filter(q => q.dim);
+    const conditionalQuestions = questions.filter(q => q.dependsOn);
+    const baseQuestions = questions.filter(q => !q.dependsOn);
 
     const app = {
       shuffledQuestions: [],
@@ -1506,7 +1503,7 @@
     function getVisibleQuestions() {
       const visible = [...app.shuffledQuestions];
 
-      conditionalSpecialQuestions.forEach((q) => {
+      conditionalQuestions.forEach((q) => {
         const { questionId, answerValue, insertAfterId = questionId } = q.dependsOn;
         const matched = app.answers[questionId] === answerValue;
         if (!matched || visible.some(item => item.id === q.id)) return;
@@ -1520,7 +1517,7 @@
     }
 
     function syncConditionalAnswers() {
-      conditionalSpecialQuestions.forEach((q) => {
+      conditionalQuestions.forEach((q) => {
         const { questionId, answerValue } = q.dependsOn;
         if (app.answers[questionId] !== answerValue) {
           delete app.answers[q.id];
@@ -1529,7 +1526,7 @@
     }
 
     function getQuestionMetaLabel(q) {
-      if (q.special) return '补充题';
+      if (!q.dim) return '补充题';
       return app.previewMode ? dimensionMeta[q.dim].name : '维度已隐藏';
     }
 
@@ -1611,7 +1608,7 @@
     }
 
     function getDrunkTriggered() {
-      return app.answers[DRUNK_TRIGGER_QUESTION_ID] === 2;
+      return app.answers['drink_gate_q2'] === 2;
     }
 
     function computeResult() {
@@ -1619,7 +1616,7 @@
       const levels = {};
       Object.keys(dimensionMeta).forEach(dim => { rawScores[dim] = 0; });
 
-      questions.forEach(q => {
+      scoredQuestions.forEach(q => {
         rawScores[q.dim] += Number(app.answers[q.id] || 0);
       });
 
@@ -1737,14 +1734,14 @@
     function startTest(preview = false) {
       app.previewMode = preview;
       app.answers = {};
-      const shuffledRegular = shuffle(questions);
-      const insertIndex = Math.floor(Math.random() * shuffledRegular.length) + 1;
-      const alwaysSpecials = specialQuestions.filter(q => !q.dependsOn);
-      app.shuffledQuestions = [
-        ...shuffledRegular.slice(0, insertIndex),
-        ...alwaysSpecials,
-        ...shuffledRegular.slice(insertIndex)
-      ];
+      const shuffledBase = shuffle(baseQuestions);
+      if (shuffledBase[0] && !shuffledBase[0].dim) {
+        const firstScoredIndex = shuffledBase.findIndex(q => q.dim);
+        if (firstScoredIndex > 0) {
+          [shuffledBase[0], shuffledBase[firstScoredIndex]] = [shuffledBase[firstScoredIndex], shuffledBase[0]];
+        }
+      }
+      app.shuffledQuestions = shuffledBase;
       renderQuestions();
       showScreen('test');
     }
