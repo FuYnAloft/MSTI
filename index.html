@@ -1082,6 +1082,7 @@
         id: 'drink_gate_q2',
         special: true,
         kind: 'drink_trigger',
+        dependsOn: { questionId: 'drink_gate_q1', answerValue: 3 },
         text: '您对饮酒的态度是？',
         options: [
           { label: '小酌怡情，喝不了太多。', value: 1 },
@@ -1466,6 +1467,7 @@
     const dimensionOrder = ['S1','S2','S3','E1','E2','E3','A1','A2','A3','Ac1','Ac2','Ac3','So1','So2','So3'];
 
     const DRUNK_TRIGGER_QUESTION_ID = 'drink_gate_q2';
+    const conditionalSpecialQuestions = specialQuestions.filter(q => q.dependsOn);
 
     const app = {
       shuffledQuestions: [],
@@ -1503,11 +1505,27 @@
 
     function getVisibleQuestions() {
       const visible = [...app.shuffledQuestions];
-      const gateIndex = visible.findIndex(q => q.id === 'drink_gate_q1');
-      if (gateIndex !== -1 && app.answers['drink_gate_q1'] === 3) {
-        visible.splice(gateIndex + 1, 0, specialQuestions[1]);
-      }
+
+      conditionalSpecialQuestions.forEach((q) => {
+        const { questionId, answerValue, insertAfterId = questionId } = q.dependsOn;
+        const matched = app.answers[questionId] === answerValue;
+        if (!matched || visible.some(item => item.id === q.id)) return;
+
+        const anchorIndex = visible.findIndex(item => item.id === insertAfterId);
+        const insertIndex = anchorIndex === -1 ? visible.length : anchorIndex + 1;
+        visible.splice(insertIndex, 0, q);
+      });
+
       return visible;
+    }
+
+    function syncConditionalAnswers() {
+      conditionalSpecialQuestions.forEach((q) => {
+        const { questionId, answerValue } = q.dependsOn;
+        if (app.answers[questionId] !== answerValue) {
+          delete app.answers[q.id];
+        }
+      });
     }
 
     function getQuestionMetaLabel(q) {
@@ -1547,12 +1565,12 @@
       questionList.querySelectorAll('input[type="radio"]').forEach(input => {
         input.addEventListener('change', (e) => {
           const { name, value } = e.target;
+          const visibleBefore = getVisibleQuestions().map(q => q.id).join('|');
           app.answers[name] = Number(value);
+          syncConditionalAnswers();
 
-          if (name === 'drink_gate_q1') {
-            if (Number(value) !== 3) {
-              delete app.answers['drink_gate_q2'];
-            }
+          const visibleAfter = getVisibleQuestions().map(q => q.id).join('|');
+          if (visibleBefore !== visibleAfter) {
             renderQuestions();
             return;
           }
@@ -1721,9 +1739,10 @@
       app.answers = {};
       const shuffledRegular = shuffle(questions);
       const insertIndex = Math.floor(Math.random() * shuffledRegular.length) + 1;
+      const alwaysSpecials = specialQuestions.filter(q => !q.dependsOn);
       app.shuffledQuestions = [
         ...shuffledRegular.slice(0, insertIndex),
-        specialQuestions[0],
+        ...alwaysSpecials,
         ...shuffledRegular.slice(insertIndex)
       ];
       renderQuestions();
