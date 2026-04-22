@@ -10,11 +10,18 @@ class DimExplanation:
 
 
 @dataclass(frozen=True, slots=True)
+class DimThreshold:
+    lowMax: int
+    midMax: int
+
+
+@dataclass(frozen=True, slots=True)
 class Dimension:
     id: str
     name: str
     model: str
     explanation: DimExplanation
+    thresholds: DimThreshold
 
 
 @dataclass(frozen=True, slots=True)
