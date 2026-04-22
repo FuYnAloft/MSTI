@@ -1,5 +1,7 @@
 import shutil
 import os
+from schema import *
+from config import *
 
 def main():
     if os.path.exists('dist'):

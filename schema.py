@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 
@@ -30,7 +30,7 @@ class Option:
     value: int
 
 
-def options(labels: Iterable[str]) -> list[Option]:
+def options(*labels: str) -> list[Option]:
     return [Option(label, i + 1) for i, label in enumerate(labels)]
 
 
@@ -55,12 +55,12 @@ class Type:
     cn: str
     intro: str
     desc: str
-    image_path: str
+    image: str
     pattern: str
 
 
 @dataclass(frozen=True, slots=True)
 class Xxbi:
-    dimensions: Iterable[Dimension]
-    questions: Iterable[Question]
-    types: Iterable[Type]
+    dimensions: Sequence[Dimension]
+    questions: Sequence[Question]
+    types: Sequence[Type]
