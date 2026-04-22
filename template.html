@@ -1462,9 +1462,28 @@
 };
     const dimensionOrder = ['S1','S2','S3','E1','E2','E3','A1','A2','A3','Ac1','Ac2','Ac3','So1','So2','So3'];
 
-    const scoredQuestions = questions.filter(q => q.dim);
-    const conditionalQuestions = questions.filter(q => q.dependsOn);
-    const baseQuestions = questions.filter(q => !q.dependsOn);
+    const xxbi = {
+      dimensions: dimensionOrder.map((id) => ({
+        id,
+        ...dimensionMeta[id],
+        explanation: DIM_EXPLANATIONS[id]
+      })),
+      questions,
+      types: Object.values(TYPE_LIBRARY).map((type) => ({
+        ...type,
+        image: TYPE_IMAGES[type.code] || '',
+        pattern: (NORMAL_TYPES.find(item => item.code === type.code) || {}).pattern || ''
+      }))
+    };
+
+    const dimensionsById = Object.fromEntries(xxbi.dimensions.map((dim) => [dim.id, dim]));
+    const typesByCode = Object.fromEntries(xxbi.types.map((type) => [type.code, type]));
+    const normalTypes = xxbi.types.filter(type => type.pattern);
+    const dimIds = xxbi.dimensions.map(dim => dim.id);
+
+    const scoredQuestions = xxbi.questions.filter(q => q.dim);
+    const conditionalQuestions = xxbi.questions.filter(q => q.dependsOn);
+    const baseQuestions = xxbi.questions.filter(q => !q.dependsOn);
 
     const app = {
       shuffledQuestions: [],
@@ -1527,7 +1546,7 @@
 
     function getQuestionMetaLabel(q) {
       if (!q.dim) return '补充题';
-      return app.previewMode ? dimensionMeta[q.dim].name : '维度已隐藏';
+      return app.previewMode ? dimensionsById[q.dim].name : '维度已隐藏';
     }
 
     function renderQuestions() {
@@ -1595,7 +1614,7 @@
 
     function getThresholds(dim) {
       const defaults = { lowMax: 3, midMax: 4 };
-      const current = dimensionMeta[dim]?.thresholds || defaults;
+      const current = dimensionsById[dim]?.thresholds || defaults;
       const lowMax = Number(current.lowMax);
       const midMax = Number(current.midMax);
       if (!Number.isFinite(lowMax) || !Number.isFinite(midMax) || lowMax >= midMax) {
@@ -1627,7 +1646,7 @@
     function computeResult() {
       const rawScores = {};
       const levels = {};
-      Object.keys(dimensionMeta).forEach(dim => { rawScores[dim] = 0; });
+      dimIds.forEach(dim => { rawScores[dim] = 0; });
 
       scoredQuestions.forEach(q => {
         rawScores[q.dim] += Number(app.answers[q.id] || 0);
@@ -1637,10 +1656,10 @@
         levels[dim] = sumToLevel(score, getThresholds(dim));
       });
 
-      const userVector = dimensionOrder.map(dim => levelNum(levels[dim]));
-      const ranked = NORMAL_TYPES.map(type => {
+      const userVector = dimIds.map(dim => levelNum(levels[dim]));
+      const ranked = normalTypes.map(type => {
         const parsed = parsePattern(type.pattern);
-        if (!parsed || parsed.length !== dimensionOrder.length) return null;
+        if (!parsed || parsed.length !== dimIds.length) return null;
         const vector = parsed.map(levelNum);
         let distance = 0;
         let exact = 0;
@@ -1649,8 +1668,9 @@
           distance += diff;
           if (diff === 0) exact += 1;
         }
-        const similarity = Math.max(0, Math.round((1 - distance / 30) * 100));
-        return { ...type, ...TYPE_LIBRARY[type.code], distance, exact, similarity };
+        const maxDistance = vector.length * 2;
+        const similarity = Math.max(0, Math.round((1 - distance / maxDistance) * 100));
+        return { ...type, distance, exact, similarity };
       }).filter(Boolean).sort((a, b) => {
         if (a.distance !== b.distance) return a.distance - b.distance;
         if (b.exact !== a.exact) return b.exact - a.exact;
@@ -1662,20 +1682,20 @@
 
       let finalType;
       let modeKicker = '你的主类型';
-      let badge = `匹配度 ${bestNormal.similarity}% · 精准命中 ${bestNormal.exact}/15 维`;
+      let badge = `匹配度 ${bestNormal.similarity}% · 精准命中 ${bestNormal.exact}/${dimIds.length} 维`;
       let sub = '维度命中度较高，当前结果可视为你的第一人格画像。';
       let special = false;
       let secondaryType = null;
 
       if (drunkTriggered) {
-        finalType = TYPE_LIBRARY.DRUNK;
+        finalType = typesByCode.DRUNK;
         secondaryType = bestNormal;
         modeKicker = '隐藏人格已激活';
         badge = '匹配度 100% · 酒精异常因子已接管';
         sub = '乙醇亲和性过强，系统已直接跳过常规人格审判。';
         special = true;
       } else if (bestNormal.similarity < 60) {
-        finalType = TYPE_LIBRARY.HHHH;
+        finalType = typesByCode.HHHH;
         modeKicker = '系统强制兜底';
         badge = `标准人格库最高匹配仅 ${bestNormal.similarity}%`;
         sub = '标准人格库对你的脑回路集体罢工了，于是系统把你强制分配给了 HHHH。';
@@ -1700,13 +1720,13 @@
 
     function renderDimList(result) {
       const dimList = document.getElementById('dimList');
-      dimList.innerHTML = dimensionOrder.map(dim => {
+      dimList.innerHTML = dimIds.map(dim => {
         const level = result.levels[dim];
-        const explanation = DIM_EXPLANATIONS[dim][level];
+        const explanation = dimensionsById[dim].explanation[level];
         return `
           <div class="dim-item">
             <div class="dim-item-top">
-              <div class="dim-item-name">${dimensionMeta[dim].name}</div>
+              <div class="dim-item-name">${dimensionsById[dim].name}</div>
               <div class="dim-item-score">${level} / ${result.rawScores[dim]}分</div>
             </div>
             <p>${explanation}</p>
@@ -1731,7 +1751,7 @@
 
       const posterBox = document.getElementById('posterBox');
       const posterImage = document.getElementById('posterImage');
-      const imageSrc = TYPE_IMAGES[type.code];
+      const imageSrc = type.image;
       if (imageSrc) {
         posterImage.src = imageSrc;
         posterImage.alt = `${type.code}（${type.cn}）`;
