@@ -21,7 +21,7 @@ class Dimension:
     name: str
     model: str
     explanation: DimExplanation
-    thresholds: DimThreshold
+    thresholds: DimThreshold = DimThreshold(3, 4)
 
 
 @dataclass(frozen=True, slots=True)

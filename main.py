@@ -1,20 +1,27 @@
-import shutil
+import json
 import os
-from schema import *
-from config import *
+import shutil
+from dataclasses import asdict
 
-def main():
+from jinja2 import Environment, FileSystemLoader
+
+from config import XXBI
+
+
+def main() -> None:
     if os.path.exists('dist'):
         shutil.rmtree('dist')
     shutil.copytree('public', 'dist')
 
-    with open('template.html') as f:
-        template = f.read()
+    env = Environment(loader=FileSystemLoader('.'), autoescape=False)
+    template = env.get_template('template.html')
 
-    # process
+    xxbi_json = json.dumps(asdict(XXBI), ensure_ascii=False)
+    html = template.render(xxbi_json=xxbi_json)
 
-    with open('dist/index.html', 'w') as f:
-        f.write(template)
+    with open('dist/index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+
 
 if __name__ == '__main__':
     main()
