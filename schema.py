@@ -49,6 +49,15 @@ class Question:
     dependsOn: QuestionDependency | None = None
 
 
+_q_counter = 0
+
+
+def qauto():
+    global _q_counter
+    _q_counter += 1
+    return f'q{_q_counter}'
+
+
 @dataclass(frozen=True, slots=True)
 class Type:
     code: str
