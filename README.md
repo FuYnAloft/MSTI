@@ -5,7 +5,7 @@
 ## Build
 
 ```powershell
-uv run main.py
+uv run build.py
 ```
 
 生成静态网页目录：`dist/`

@@ -9,9 +9,12 @@ from config import XXBI
 
 
 def main() -> None:
-    if os.path.exists('dist'):
+    try:
         shutil.rmtree('dist')
-    shutil.copytree('public', 'dist')
+    except PermissionError:
+        pass
+    os.makedirs('dist', exist_ok=True)
+    shutil.copytree('public', 'dist', dirs_exist_ok=True)
 
     env = Environment(loader=FileSystemLoader('.'), autoescape=False)
     template = env.get_template('template.html')
@@ -21,6 +24,8 @@ def main() -> None:
 
     with open('dist/index.html', 'w', encoding='utf-8') as f:
         f.write(html)
+
+    print("构建成功")
 
 
 if __name__ == '__main__':
