@@ -11,7 +11,7 @@ from config import XXBI
 def main() -> None:
     try:
         shutil.rmtree('dist')
-    except PermissionError:
+    except:
         pass
     os.makedirs('dist', exist_ok=True)
     shutil.copytree('public', 'dist', dirs_exist_ok=True)
