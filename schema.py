@@ -99,5 +99,5 @@ class Type:
 @dataclass(frozen=True, slots=True)
 class Xxbi:
     topN: int
-    questions: Sequence[Question]
     types: Sequence[Type]
+    questions: Sequence[Question]
