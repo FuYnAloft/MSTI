@@ -4,9 +4,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class Option:
-    """选项定义"""
-    label: str  # 选项文本
-    scores: dict[str, int]  # 对人格类型的加分映射
+    """
+    选项定义
+    :param label: 选项的文本内容
+    :param scores: 对人格类型的加分映射，格式为 {人格代码: 分值}
+    """
+    label: str
+    scores: dict[str, int]
 
 
 def options(personality: str | None, *labels: str, descending: bool = False) -> list[Option]:
@@ -29,14 +33,24 @@ def options(personality: str | None, *labels: str, descending: bool = False) -> 
 
 @dataclass(frozen=True, slots=True)
 class QuestionDependency:
-    """问题依赖，用于在特定问题回答特定选项后展示本问题"""
+    """
+    问题依赖，用于在特定问题回答特定选项后展示本问题
+    :param questionId: 依赖的问题 ID
+    :param answerValue: 依赖的问题的选项序号
+    """
     questionId: str
     answerValue: int
 
 
 @dataclass(frozen=True, slots=True)
 class Question:
-    """问题定义"""
+    """
+    问题定义
+    :param id: 问题 ID，必须唯一
+    :param text: 问题文本
+    :param options: 选项列表
+    :param dependsOn: 可选的依赖定义，如果存在则只有在满足依赖条件时才展示该问题
+    """
     id: str
     text: str
     options: Iterable[Option]
@@ -58,12 +72,19 @@ def qauto():
 
 @dataclass(frozen=True, slots=True)
 class Type:
-    """人格类型"""
-    code: str  # 类型的编码
-    cn: str  # 类型中文名
-    intro: str  # 类型简介
-    desc: str  # 类型描述
-    image: str  # 类型图片
+    """
+    人格类型
+    :param code: 人格类型的编码，必须唯一
+    :param cn: 人格类型的中文名称
+    :param intro: 人格类型的简介
+    :param desc: 人格类型的详细描述
+    :param image: 人格类型的图片 URL
+    """
+    code: str
+    cn: str
+    intro: str
+    desc: str
+    image: str
 
 
 @dataclass(frozen=True, slots=True)
