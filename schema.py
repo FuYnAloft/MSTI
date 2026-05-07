@@ -31,6 +31,15 @@ def options(personality: str | None, *labels: str, descending: bool = False) -> 
     return result
 
 
+def options_map(*choices: tuple[str, str]) -> list[Option]:
+    """
+    为每个选项分配不同的人格类型，且分值固定为 1。
+    :param choices: 格式为 (选项文本, 人格类型代码) 的可变参数
+    :return: 生成的选项列表
+    """
+    return [Option(label=label, scores={p_code: 1}) for label, p_code in choices]
+
+
 @dataclass(frozen=True, slots=True)
 class QuestionDependency:
     """
