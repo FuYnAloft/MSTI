@@ -744,9 +744,9 @@
             <p id="resultDesc"></p>
           </div>
 
-          <div class="dim-box">
-            <h3>十五维度评分</h3>
-            <div id="dimList" class="dim-list"></div>
+          <div class="top3-box">
+            <h3 id="topListTitle">Top 人格</h3>
+            <div id="topList" class="top3-list"></div>
           </div>
 
           <div class="note-box">
@@ -779,12 +779,9 @@
   <script>
     const xxbi = JSON.parse(document.getElementById('xxbiData').textContent);
 
-    const dimensionsById = Object.fromEntries(xxbi.dimensions.map((dim) => [dim.id, dim]));
     const typesByCode = Object.fromEntries(xxbi.types.map((type) => [type.code, type]));
-    const normalTypes = xxbi.types.filter(type => type.pattern);
-    const dimIds = xxbi.dimensions.map(dim => dim.id);
+    const topN = Math.max(1, Number(xxbi.topN) || 3);
 
-    const scoredQuestions = xxbi.questions.filter(q => q.dim);
     const conditionalQuestions = xxbi.questions.filter(q => q.dependsOn);
     const baseQuestions = xxbi.questions.filter(q => !q.dependsOn);
 
@@ -847,9 +844,12 @@
       });
     }
 
+    function isScoredQuestion(q) {
+      return q.options.some((opt) => opt.scores && Object.keys(opt.scores).length > 0);
+    }
+
     function getQuestionMetaLabel(q) {
-      if (!q.dim) return '补充题';
-      return app.previewMode ? dimensionsById[q.dim].name : '维度已隐藏';
+      return isScoredQuestion(q) ? '类型已隐藏' : '补充题';
     }
 
     function renderQuestions() {
@@ -867,10 +867,10 @@
           <div class="options">
             ${q.options.map((opt, i) => {
               const code = ['A', 'B', 'C', 'D'][i] || String(i + 1);
-              const checked = app.answers[q.id] === opt.value ? 'checked' : '';
+              const checked = app.answers[q.id] === i ? 'checked' : '';
               return `
                 <label class="option">
-                  <input type="radio" name="${q.id}" value="${opt.value}" ${checked} />
+                  <input type="radio" name="${q.id}" value="${i}" ${checked} />
                   <div class="option-code">${code}</div>
                   <div>${opt.label}</div>
                 </label>
@@ -915,148 +915,69 @@
         : '全选完才会放行。世界已经够乱了，起码把题做完整。';
     }
 
-    function getThresholds(dim) {
-      const defaults = { lowMax: 3, midMax: 4 };
-      const current = dimensionsById[dim]?.thresholds || defaults;
-      const lowMax = Number(current.lowMax);
-      const midMax = Number(current.midMax);
-      if (!Number.isFinite(lowMax) || !Number.isFinite(midMax) || lowMax >= midMax) {
-        return defaults;
-      }
-      return { lowMax, midMax };
-    }
-
-    function sumToLevel(score, thresholds) {
-      if (score <= thresholds.lowMax) return 'L';
-      if (score <= thresholds.midMax) return 'M';
-      return 'H';
-    }
-
-    function levelNum(level) {
-      return { L: 1, M: 2, H: 3 }[level];
-    }
-
-    function parsePattern(pattern) {
-      const normalized = String(pattern || '').trim().toUpperCase();
-      if (!/^[LMH]+$/.test(normalized)) return null;
-      return normalized.split('');
-    }
-
-    function getDrunkTriggered() {
-      return app.answers['drink_gate_q2'] === 2;
-    }
-
     function computeResult() {
-      const rawScores = {};
-      const levels = {};
-      dimIds.forEach(dim => { rawScores[dim] = 0; });
+      const typeScores = Object.fromEntries(xxbi.types.map(type => [type.code, 0]));
 
-      scoredQuestions.forEach(q => {
-        rawScores[q.dim] += Number(app.answers[q.id] || 0);
+      xxbi.questions.forEach((q) => {
+        const answerIndex = app.answers[q.id];
+        if (answerIndex === undefined) return;
+        const selected = q.options[answerIndex];
+        if (!selected || !selected.scores) return;
+        Object.entries(selected.scores).forEach(([code, score]) => {
+          if (typeScores[code] === undefined) {
+            typeScores[code] = 0;
+          }
+          typeScores[code] += Number(score) || 0;
+        });
       });
 
-      Object.entries(rawScores).forEach(([dim, score]) => {
-        levels[dim] = sumToLevel(score, getThresholds(dim));
-      });
+      const ranked = xxbi.types
+        .map(type => ({ ...type, score: typeScores[type.code] ?? 0 }))
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.code.localeCompare(b.code);
+        });
 
-      const userVector = dimIds.map(dim => levelNum(levels[dim]));
-      const ranked = normalTypes.map(type => {
-        const parsed = parsePattern(type.pattern);
-        if (!parsed || parsed.length !== dimIds.length) return null;
-        const vector = parsed.map(levelNum);
-        let distance = 0;
-        let exact = 0;
-        for (let i = 0; i < vector.length; i++) {
-          const diff = Math.abs(userVector[i] - vector[i]);
-          distance += diff;
-          if (diff === 0) exact += 1;
-        }
-        const maxDistance = vector.length * 2;
-        const similarity = Math.max(0, Math.round((1 - distance / maxDistance) * 100));
-        return { ...type, distance, exact, similarity };
-      }).filter(Boolean).sort((a, b) => {
-        if (a.distance !== b.distance) return a.distance - b.distance;
-        if (b.exact !== a.exact) return b.exact - a.exact;
-        return b.similarity - a.similarity;
-      });
-
-      const bestNormal = ranked[0];
-      const drunkTriggered = getDrunkTriggered();
-
-      let finalType;
-      let modeKicker = '你的主类型';
-      let badge = `匹配度 ${bestNormal.similarity}% · 精准命中 ${bestNormal.exact}/${dimIds.length} 维`;
-      let sub = '维度命中度较高，当前结果可视为你的第一人格画像。';
-      let special = false;
-      let secondaryType = null;
-
-      if (drunkTriggered) {
-        finalType = typesByCode.DRUNK;
-        secondaryType = bestNormal;
-        modeKicker = '隐藏人格已激活';
-        badge = '匹配度 100% · 酒精异常因子已接管';
-        sub = '乙醇亲和性过强，系统已直接跳过常规人格审判。';
-        special = true;
-      } else if (bestNormal.similarity < 60) {
-        finalType = typesByCode.HHHH;
-        modeKicker = '系统强制兜底';
-        badge = `标准人格库最高匹配仅 ${bestNormal.similarity}%`;
-        sub = '标准人格库对你的脑回路集体罢工了，于是系统把你强制分配给了 HHHH。';
-        special = true;
-      } else {
-        finalType = bestNormal;
-      }
-
+      const finalType = ranked[0] || xxbi.types[0];
       return {
-        rawScores,
-        levels,
         ranked,
-        bestNormal,
         finalType,
-        modeKicker,
-        badge,
-        sub,
-        special,
-        secondaryType
+        topList: ranked.slice(0, topN),
+        badge: `最高得分 ${finalType.score}`,
+        sub: `Top ${topN} 人格得分如下。`
       };
     }
 
-    function renderDimList(result) {
-      const dimList = document.getElementById('dimList');
-      dimList.innerHTML = dimIds.map(dim => {
-        const level = result.levels[dim];
-        const explanation = dimensionsById[dim].explanation[level];
-        return `
-          <div class="dim-item">
-            <div class="dim-item-top">
-              <div class="dim-item-name">${dimensionsById[dim].name}</div>
-              <div class="dim-item-score">${level} / ${result.rawScores[dim]}分</div>
-            </div>
-            <p>${explanation}</p>
+    function renderTopList(result) {
+      const topList = document.getElementById('topList');
+      topList.innerHTML = result.topList.map((item, index) => `
+        <div class="top3-item">
+          <div>
+            <strong>${index + 1}. ${item.code}（${item.cn}）</strong>
+            <span>${item.intro}</span>
           </div>
-        `;
-      }).join('');
+          <div class="top3-score">${item.score}</div>
+        </div>
+      `).join('');
+      document.getElementById('topListTitle').textContent = `Top ${topN} 人格`;
     }
 
     function renderResult() {
       const result = computeResult();
       const type = result.finalType;
 
-      document.getElementById('resultModeKicker').textContent = result.modeKicker;
+      document.getElementById('resultModeKicker').textContent = '你的主类型';
       document.getElementById('resultTypeName').textContent = `${type.code}（${type.cn}）`;
       document.getElementById('matchBadge').textContent = result.badge;
       document.getElementById('resultTypeSub').textContent = result.sub;
       document.getElementById('resultDesc').textContent = type.desc;
       document.getElementById('posterCaption').textContent = type.intro;
-      document.getElementById('funNote').textContent = result.special
-        ? '本测试仅供娱乐。隐藏人格和傻乐兜底都属于作者故意埋的损招，请勿把它当成医学、心理学、相学、命理学或灵异学依据。'
-        : '本测试仅供娱乐，别拿它当诊断、面试、相亲、分手、招魂、算命或人生判决书。你可以笑，但别太当真。';
+      document.getElementById('funNote').textContent = '本测试仅供娱乐，别拿它当诊断、面试、相亲、分手、招魂、算命或人生判决书。你可以笑，但别太当真。';
 
       const posterBox = document.getElementById('posterBox');
       const posterImage = document.getElementById('posterImage');
-      const imageSrc = type.image;
-      if (imageSrc) {
-        posterImage.src = imageSrc;
+      if (type.image) {
+        posterImage.src = type.image;
         posterImage.alt = `${type.code}（${type.cn}）`;
         posterBox.classList.remove('no-image');
       } else {
@@ -1065,21 +986,14 @@
         posterBox.classList.add('no-image');
       }
 
-      renderDimList(result);
+      renderTopList(result);
       showScreen('result');
     }
 
     function startTest(preview = false) {
       app.previewMode = preview;
       app.answers = {};
-      const shuffledBase = shuffle(baseQuestions);
-      if (shuffledBase[0] && !shuffledBase[0].dim) {
-        const firstScoredIndex = shuffledBase.findIndex(q => q.dim);
-        if (firstScoredIndex > 0) {
-          [shuffledBase[0], shuffledBase[firstScoredIndex]] = [shuffledBase[firstScoredIndex], shuffledBase[0]];
-        }
-      }
-      app.shuffledQuestions = shuffledBase;
+      app.shuffledQuestions = shuffle(baseQuestions);
       renderQuestions();
       showScreen('test');
     }
