@@ -944,7 +944,7 @@
 
       document.getElementById('resultModeKicker').textContent = '你的主类型';
       document.getElementById('resultTypeName').textContent = `${type.code}（${type.cn}）`;
-      document.getElementById('matchBadge').textContent = result.badge;
+      document.getElementById('matchBadge').textContent = '获取结果中……';
       document.getElementById('resultTypeSub').textContent = result.sub;
       document.getElementById('resultDesc').textContent = type.desc;
       document.getElementById('posterCaption').textContent = type.intro;
@@ -1006,6 +1006,7 @@
         } catch (err) {
           // 超时或网络错误时走这里，此时界面保留原有的 result.badge，不做变动
           console.error('Record request failed or timed out:', err);
+          document.getElementById('matchBadge').textContent = result.badge;
         }
       }
     }
