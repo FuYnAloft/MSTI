@@ -920,7 +920,7 @@
       return {
         ranked,
         finalType,
-        topList: ranked.slice(0, topN),
+        topList: ranked.slice(1, topN + 1),
         badge: finalType.code,
         sub: `得分较高，当前结果可视为你的第一人格画像。`
       };
@@ -936,7 +936,7 @@
           </div>
         </div>
       `).join('');
-      document.getElementById('topListTitle').textContent = `Top ${topN} 人格`;
+      document.getElementById('topListTitle').textContent = `感觉不太准？其实你还有可能是……`;
     }
 
     async function renderResult() {
