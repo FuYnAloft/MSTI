@@ -894,11 +894,26 @@
         });
       });
 
+      const answerSeed = Object.keys(app.answers)
+              .sort()
+              .map(id => `${id}:${app.answers[id]}`)
+              .join('|');
+
+      const getStableHash = (typeCode, seed) => {
+        const str = typeCode + seed;
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+          hash |= 0;
+        }
+        return hash;
+      };
+
       const ranked = xxbi.types
         .map(type => ({ ...type, score: typeScores[type.code] ?? 0 }))
         .sort((a, b) => {
           if (b.score !== a.score) return b.score - a.score;
-          return a.code.localeCompare(b.code);
+          return getStableHash(a.code, answerSeed) - getStableHash(b.code, answerSeed);
         });
 
       const finalType = ranked[0] || xxbi.types[0];
