@@ -929,6 +929,19 @@
       const result = computeResult();
       const type = result.finalType;
 
+       // --- 新增：发送数据到后端 ---
+      if (xxbi.api_base) {
+        fetch(`${xxbi.api_base.replace(/\/$/, '')}/record`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: type.code, // 比如 "INTJ"
+            score: type.score // 对应得分
+          })
+        }).catch(err => console.error('Record failed:', err));
+      }
+      // --------------------------
+
       document.getElementById('resultModeKicker').textContent = '你的主类型';
       document.getElementById('resultTypeName').textContent = `${type.code}（${type.cn}）`;
       document.getElementById('matchBadge').textContent = result.badge;

@@ -1,6 +1,7 @@
 from schema import *
 
 XXBI: Xxbi = Xxbi(
+    api_base=" https://contacting-strips-stored-learning.trycloudflare.com/",
     topN=3,
     types=[
         Type('REAC', '反应釜', '反应釜型',

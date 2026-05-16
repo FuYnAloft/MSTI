@@ -101,3 +101,4 @@ class Xxbi:
     topN: int
     types: Sequence[Type]
     questions: Sequence[Question]
+    api_base: str
