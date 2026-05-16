@@ -956,13 +956,14 @@
       if (xxbi.api_base) {
         const baseUrl = xxbi.api_base.replace(/\/$/, '');
 
-        // 1. 发送所有题目的答题记录到 /record-any (无需等待结果)
-        // app.answers 的格式已经是 { "question_id_1": 0, "question_id_2": 2 }
-        const answersPayload = JSON.stringify(app.answers);
+        // 1. 发送题目回答记录，明确 data_type 为 'answers'
         fetch(`${baseUrl}/record-any`, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({text: `Answers: ${answersPayload}`})
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: JSON.stringify(app.answers),
+            data_type: 'answers' // 明确标识数据类型
+          })
         }).catch(err => console.error('Record-any failed:', err));
 
         // 2. 发送最终得分到 /record 并等待结果更新 Badge (带 5 秒超时)
