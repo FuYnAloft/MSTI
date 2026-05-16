@@ -925,22 +925,9 @@
       document.getElementById('topListTitle').textContent = `Top ${topN} 人格`;
     }
 
-    function renderResult() {
+    async function renderResult() {
       const result = computeResult();
       const type = result.finalType;
-
-       // --- 新增：发送数据到后端 ---
-      if (xxbi.api_base) {
-        fetch(`${xxbi.api_base.replace(/\/$/, '')}/record`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: type.code, // 比如 "INTJ"
-            score: type.score // 对应得分
-          })
-        }).catch(err => console.error('Record failed:', err));
-      }
-      // --------------------------
 
       document.getElementById('resultModeKicker').textContent = '你的主类型';
       document.getElementById('resultTypeName').textContent = `${type.code}（${type.cn}）`;
@@ -964,6 +951,49 @@
 
       renderTopList(result);
       showScreen('result');
+
+      // --- 网络请求部分 ---
+      if (xxbi.api_base) {
+        const baseUrl = xxbi.api_base.replace(/\/$/, '');
+
+        // 1. 发送所有题目的答题记录到 /record-any (无需等待结果)
+        // app.answers 的格式已经是 { "question_id_1": 0, "question_id_2": 2 }
+        const answersPayload = JSON.stringify(app.answers);
+        fetch(`${baseUrl}/record-any`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text: `Answers: ${answersPayload}`})
+        }).catch(err => console.error('Record-any failed:', err));
+
+        // 2. 发送最终得分到 /record 并等待结果更新 Badge (带 5 秒超时)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        try {
+          const res = await fetch(`${baseUrl}/record`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              type: type.code,
+              score: type.score
+            }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId); // 请求成功，清除超时定时器
+
+          if (res.ok) {
+            const data = await res.json();
+            // 计算百分比并保留1位小数，如 12.5%
+            const percent = (data.ratio * 100).toFixed(1);
+            // 更新 Badge 文本
+            document.getElementById('matchBadge').textContent = `你的人格和 ${percent}% 的人重合`;
+          }
+        } catch (err) {
+          // 超时或网络错误时走这里，此时界面保留原有的 result.badge，不做变动
+          console.error('Record request failed or timed out:', err);
+        }
+      }
     }
 
     function startTest(preview = false) {
