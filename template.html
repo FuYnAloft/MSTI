@@ -695,7 +695,7 @@
         <div id="questionList" class="question-list"></div>
 
         <div class="actions-bottom">
-          <div class="hint" id="testHint">全选完才会放行。世界已经够乱了，起码把题做完整。</div>
+          <div class="hint" id="testHint">试剂未配齐，禁止下一步；反应物没加全，不准看结果。</div>
           <div style="display: flex; justify-content: flex-end; width: 100%;">
             <button id="submitBtn" class="btn-primary" disabled>提交并查看结果</button>
           </div>
@@ -895,8 +895,8 @@
       const complete = done === total && total > 0;
       submitBtn.disabled = !complete;
       testHint.textContent = complete
-        ? '都做完了。现在可以把你的电子魂魄交给结果页审判。'
-        : '全选完才会放行。世界已经够乱了，起码把题做完整。';
+        ? '全部加样完毕，现在可以把你的谱图送去结果页解析了。'
+        : '试剂未配齐，禁止下一步；反应物没加全，不准看结果。';
     }
 
     function computeResult() {
