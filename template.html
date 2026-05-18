@@ -583,13 +583,13 @@
       line-height: 1.8;
     }
 
-    .author-box {
+    .bonus-box {
       border: 1px solid var(--line);
       border-radius: 18px;
       background: linear-gradient(180deg, #ffffff, #f9fbff);
       overflow: hidden;
     }
-    .author-box summary {
+    .bonus-box summary {
       list-style: none;
       cursor: pointer;
       padding: 18px;
@@ -601,8 +601,8 @@
       justify-content: space-between;
       gap: 12px;
     }
-    .author-box summary::-webkit-details-marker { display: none; }
-    .author-box summary::after {
+    .bonus-box summary::-webkit-details-marker { display: none; }
+    .bonus-box summary::after {
       content: '展开';
       font-size: 12px;
       font-weight: 700;
@@ -613,17 +613,17 @@
       border-radius: 999px;
       flex-shrink: 0;
     }
-    .author-box[open] summary::after {
+    .bonus-box[open] summary::after {
       content: '收起';
     }
-    .author-content {
+    .bonus-content {
       border-top: 1px solid var(--line);
       padding: 0 18px 18px;
     }
-    .author-content p {
+    .bonus-content p {
       margin: 14px 0 0;
       color: #2d3748;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.9;
     }
 
@@ -726,9 +726,13 @@
             <p id="resultDesc"></p>
           </div>
 
-          <details class="author-box">
-            <summary>隐藏增益效果（化学文化节现场适用！）</summary>
-            <div class="author-content">
+          <details class="bonus-box">
+            <summary>
+              <div style="flex: 1; line-height: 1.4; padding-right: 8px;">
+                隐藏增益效果<span style="white-space: nowrap;">（化学文化节现场适用！）</span>
+              </div>
+            </summary>
+            <div class="bonus-content">
               <p id="bonusDescription">谢谢惠顾</p>
             </div>
           </details>
@@ -1051,7 +1055,7 @@
     document.getElementById('toTopBtn').addEventListener('click', () => showScreen('intro'));
 
     // 监听增益效果的展开动作
-    document.querySelector('.author-box').addEventListener('toggle', function(e) {
+    document.querySelector('.bonus-box').addEventListener('toggle', function(e) {
       const bonusP = document.getElementById('bonusDescription');
 
       // 只有在 1.详情打开时 2.还没加载过时 触发
