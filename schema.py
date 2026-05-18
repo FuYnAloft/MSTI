@@ -94,6 +94,7 @@ class Type:
     intro: str
     desc: str
     image: str
+    bonus: str = ""
 
 
 @dataclass(frozen=True, slots=True)
