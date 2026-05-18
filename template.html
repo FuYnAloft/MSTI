@@ -717,7 +717,6 @@
               <div class="type-kicker" id="resultModeKicker">你的主类型</div>
               <div class="type-name" id="resultTypeName">CTRL（拿捏者）</div>
               <div class="match" id="matchBadge">匹配度 92%</div>
-              <div class="type-subname" id="resultTypeSub">系统备注会显示在这里。</div>
             </div>
           </div>
 
@@ -744,7 +743,7 @@
 
           <div class="note-box">
             <h3>友情提示</h3>
-            <p id="funNote">本测试仅供娱乐，别拿它当诊断、面试、相亲、分手、招魂、算命或人生判决书。</p>
+            <p id="funNote">北京大学化学与分子工程学院学生会提醒您：<br>&emsp;&emsp;本测试仅供娱乐，不是实验报告，不是MSDS（化学品安全技术说明书），更不是人生方程式。请勿用于选对象、拒offer、哄自己、气老板、占卜吉凶或替代心理咨询。反应结束请倒掉，别留在脑子里。</p>
           </div>
         </div>
 
@@ -944,7 +943,6 @@
         finalType,
         topList: ranked.slice(1, topN + 1),
         badge: finalType.code,
-        sub: `得分较高，当前结果可视为你的第一人格画像。`,
         bonus: finalType.bonus
       };
     }
@@ -969,10 +967,8 @@
       document.getElementById('resultModeKicker').textContent = '你的主类型';
       document.getElementById('resultTypeName').textContent = `${type.code}（${type.cn}）`;
       document.getElementById('matchBadge').textContent = '获取结果中……';
-      document.getElementById('resultTypeSub').textContent = result.sub;
       document.getElementById('resultDesc').textContent = type.desc;
       document.getElementById('posterCaption').textContent = type.intro;
-      document.getElementById('funNote').textContent = '本测试仅供娱乐，别拿它当诊断、面试、相亲、分手、招魂、算命或人生判决书。你可以笑，但别太当真。';
 
       // 存储真实增益效果
       const bonusP = document.getElementById('bonusDescription');
